@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+import json
 import flask
 from flask import request, jsonify, send_file, g
 import youtube_dl
@@ -169,6 +170,17 @@ def vad_collector(sample_rate, frame_duration_ms,
 def post_url():
     record = request.json
 
+    min_duration = record['min_duration']
+    max_duration = record['max_duration']
+    rate = record['sample_rate']
+
+    startMin, startSec = min_duration.split(':', 1)
+    endMin, endSec = max_duration.split(':', 1)
+
+    # Time to miliseconds
+    startTime = int(startMin)*60*1000+int(startSec)*1000
+    endTime = int(endMin)*60*1000+int(endSec)*1000
+
     SAVE_PATH = os.path.dirname(app.instance_path)+'/downloaded'
 
     ydl_opts = {
@@ -192,10 +204,12 @@ def post_url():
 
     sound = AudioSegment.from_file("downloaded/"+new_filename+".wav", format="wav")
 
-    file_handle = sound.export("downloaded/convert-"+new_filename+".wav",
+    extract = sound[startTime:endTime]
+
+    file_handle = extract.export("downloaded/convert-"+new_filename+".wav",
                            format="wav",
                            bitrate="192k",
-                           parameters=["-ac", "1", "-ar", "8000"])
+                           parameters=["-ac", "1", "-ar", str(rate)])
 
     audio, sample_rate = read_wave('downloaded/convert-'+new_filename+'.wav')
     """ end read audio wave """
@@ -203,10 +217,10 @@ def post_url():
     """ mendefinisikan aggresive model VAD """
     vad = webrtcvad.Vad(3)
     """ generate frame tiap 30 ms, jadi 1 detik ada 33 frames """
-    frames = frame_generator(30, audio, sample_rate)
+    frames = frame_generator(record['frame'], audio, sample_rate)
     frames = list(frames)
     """ end modal VAD """
-    segments = vad_collector(sample_rate, 30, 300, vad, frames)
+    segments = vad_collector(sample_rate, record['frame'], 300, vad, frames)
     os.mkdir(new_filename)
     for i, segment in enumerate(segments):
         path = new_filename+'/chunk-%002d.wav' % (i,)
@@ -215,11 +229,10 @@ def post_url():
 
     data = []
     dir_output = os.listdir(new_filename+'/')
-    print(type(dir_output))
     for audio_output in sorted(dir_output):
         data.append({
             'title': audio_output,
-            'path': SAVE_PATH+'/'+audio_output,
+            'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
             'isVerified': False
         })
 
@@ -231,28 +244,43 @@ def post_url():
     
     return jsonify(response), 200
 
-@app.after_request
-def after_request(response):
-    method = request.method
-    path = request.path
+# @app.after_request
+# def after_request(response):
+#     method = request.method
+#     path = request.path
 
-    PATH = os.path.dirname(app.instance_path)+'/downloaded'
-    if path == '/urls/' and method == 'POST':
-        os.remove(PATH+'/'+g.get('file_name')+'.wav')
-        os.remove(PATH+'/convert-'+g.get('file_name')+'.wav')
+#     PATH = os.path.dirname(app.instance_path)+'/downloaded'
+#     if path == '/urls/' and method == 'POST':
+#         os.remove(PATH+'/'+g.get('file_name')+'.wav')
+#         os.remove(PATH+'/convert-'+g.get('file_name')+'.wav')
 
-    return response
+#     return response
+
+@app.route('/verify/', methods=['POST'])
+def post_vefify():
+  record = request.json
+  for i in range(len(record['data'])):
+    print(record['data'][i])
+  
+  return jsonify('success'), 200
+
+
+
+
+
+
+
     
-@app.route('/audio', methods=['GET'])
-def post_audio():
-    record = request.args['name']
+# @app.route('/audio', methods=['GET'])
+# def post_audio():
+#     record = request.args['name']
 
-    path_to_file = "/output/"+record
+#     path_to_file = "/output/"+record
     
-    return send_file(
-        path_to_file, 
-        mimetype="audio/wav", 
-        as_attachment=True)
+#     return send_file(
+#         path_to_file, 
+#         mimetype="audio/wav", 
+#         as_attachment=True)
 
 
 app.run()
