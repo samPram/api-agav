@@ -12,6 +12,10 @@ import wave
 import webrtcvad
 from slugify import slugify
 from flask_cors import cross_origin
+import time
+from io import BytesIO
+import zipfile
+import shutil
 
 app = flask.Flask(__name__)
 app.config["DEBUG"]=True
@@ -289,11 +293,44 @@ def post_url():
 
 @app.route('/verify/', methods=['POST'])
 def post_vefify():
-  record = request.json
-  for i in range(len(record['data'])):
-    print(record['data'][i])
-  
-  return jsonify('success'), 200
+    record = request.json
+
+    last_endpoint = record['data'][0]['path'].rfind('/')
+    endpoint = record['data'][0]['path'][0:last_endpoint+1]
+
+    for i in range(len(record['data'])):
+    # print(record['data'][i])
+        if record['data'][i]['isVerified'] == False:
+            os.remove(record['data'][i]['path'])
+    
+    
+
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+    fileName = "my_data_dump_{}.zip".format(timestr)
+    memory_file = BytesIO()
+    
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(endpoint):
+            for file in files:
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(endpoint, '..')))
+
+    memory_file.seek(0)
+    return send_file(memory_file, attachment_filename=fileName, as_attachment=True)
+
+
+@app.after_request
+def after_verify(response):
+    method = request.method
+    path = request.path
+    if path == '/verify/' and method == 'POST':
+
+        record = request.json
+
+        last_endpoint = record['data'][0]['path'].rfind('/')
+        endpoint = record['data'][0]['path'][0:last_endpoint+1]
+        shutil.rmtree(endpoint)
+    
+    return response
 
     
 # @app.route('/audio', methods=['GET'])
