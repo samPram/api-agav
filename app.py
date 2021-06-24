@@ -176,6 +176,7 @@ def post_url():
     record = request.json
 
     rate = record['sample_rate']
+    aggressiv = record['aggressiv']
 
     SAVE_PATH = os.path.dirname(app.instance_path)+'/downloaded'
 
@@ -251,7 +252,7 @@ def post_url():
     """ end read audio wave """
 
     """ mendefinisikan aggresive model VAD """
-    vad = webrtcvad.Vad(3)
+    vad = webrtcvad.Vad(int(aggressiv))
     """ generate frame tiap 30 ms, jadi 1 detik ada 33 frames """
     frames = frame_generator(record['frame'], audio, sample_rate)
     frames = list(frames)
@@ -280,22 +281,6 @@ def post_url():
     
     return jsonify(response), 200
 
-@app.after_request
-def after_request(response):
-    method = request.method
-    path = request.path
-
-    PATH = os.path.dirname(app.instance_path)+'/downloaded'
-    if path == '/urls/' and method == 'POST':
-        record = request.json
-        index_endpoint = record['url'].rfind('/')
-        item = record['url'][index_endpoint+1:len(record['url'])]
-        os.chdir(PATH)
-        for file in glob.glob('*-'+item.lower()+'.wav'):
-            os.remove(PATH+'/'+file)
-
-    return response
-
 @app.route('/verify/', methods=['POST'])
 def post_vefify():
     record = request.json
@@ -311,7 +296,7 @@ def post_vefify():
     
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
-    fileName = "my_data_dump_{}.zip".format(timestr)
+    fileName = "data_audio_{}.zip".format(timestr)
     memory_file = BytesIO()
     
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -330,10 +315,22 @@ def after_verify(response):
     if path == '/verify/' and method == 'POST':
 
         record = request.json
+        # REMOVE FILE IN DOWNLOADED
+        PATH = os.path.dirname(app.instance_path)+'/downloaded'
+        item = record['data'][0]['path'].split('/')
+        id_file = item[len(item)-2]
+        print(id_file)
+        
+        os.chdir(PATH)
+        for file in glob.glob('*'+id_file+'.wav'):
+            print(file)
+            os.remove(PATH+'/'+file)
 
+        # REMOVE FOLDER CHUNK
         last_endpoint = record['data'][0]['path'].rfind('/')
         endpoint = record['data'][0]['path'][0:last_endpoint+1]
         shutil.rmtree(endpoint)
+
     
     return response
 
