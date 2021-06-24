@@ -16,6 +16,7 @@ import time
 from io import BytesIO
 import zipfile
 import shutil
+import glob
 
 app = flask.Flask(__name__)
 app.config["DEBUG"]=True
@@ -279,17 +280,21 @@ def post_url():
     
     return jsonify(response), 200
 
-# @app.after_request
-# def after_request(response):
-#     method = request.method
-#     path = request.path
+@app.after_request
+def after_request(response):
+    method = request.method
+    path = request.path
 
-#     PATH = os.path.dirname(app.instance_path)+'/downloaded'
-#     if path == '/urls/' and method == 'POST':
-#         os.remove(PATH+'/'+g.get('file_name')+'.wav')
-#         os.remove(PATH+'/convert-'+g.get('file_name')+'.wav')
+    PATH = os.path.dirname(app.instance_path)+'/downloaded'
+    if path == '/urls/' and method == 'POST':
+        record = request.json
+        index_endpoint = record['url'].rfind('/')
+        item = record['url'][index_endpoint+1:len(record['url'])]
+        os.chdir(PATH)
+        for file in glob.glob('*-'+item.lower()+'.wav'):
+            os.remove(PATH+'/'+file)
 
-#     return response
+    return response
 
 @app.route('/verify/', methods=['POST'])
 def post_vefify():
@@ -331,18 +336,5 @@ def after_verify(response):
         shutil.rmtree(endpoint)
     
     return response
-
-    
-# @app.route('/audio', methods=['GET'])
-# def post_audio():
-#     record = request.args['name']
-
-#     path_to_file = "/output/"+record
-    
-#     return send_file(
-#         path_to_file, 
-#         mimetype="audio/wav", 
-#         as_attachment=True)
-
 
 app.run()
