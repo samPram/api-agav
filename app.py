@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
-import json
 import flask
-from flask import request, jsonify, send_file, g
+from flask import request, jsonify, send_file
 import youtube_dl
 import os
 from pydub import AudioSegment
@@ -10,7 +9,6 @@ import contextlib
 import sys
 import wave
 import webrtcvad
-from slugify import slugify
 from flask_cors import cross_origin
 import time
 from io import BytesIO
@@ -160,16 +158,6 @@ def vad_collector(sample_rate, frame_duration_ms,
 3 merupakan params tingkat aggresive
  """
 
-""" before POST request /urls/ """
-# @app.before_request
-# def before_request():
-#     method = request.method
-#     path = request.path
-
-#     if path == '/urls/' and method == 'POST':
-        # """ remove output VAD """
-        # shutil.rmtree(os.path.join(os.getcwd(), 'output'))
-
 @app.route("/urls/", methods=['POST'])
 @cross_origin()
 def post_url():
@@ -187,16 +175,16 @@ def post_url():
             'preferredcodec': 'wav',
             'preferredquality': '192',
         }],
-        'outtmpl': SAVE_PATH+'/%(title)s %(id)s.%(ext)s',
+        'outtmpl': SAVE_PATH+'/%(id)s.%(ext)s',
     }
 
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download([record['url']])
         info = ydl.extract_info(record['url'], download=True)
-        filename = info.get('title', None)+' '+info.get('id', None)
+        filename = info.get('id', None)
     
-    new_filename = slugify(filename, lowercase=True)
-    g.file_name = new_filename
+    # print(type(filename))
+    new_filename = str(filename).lower()
     os.rename(SAVE_PATH+'/'+filename+'.wav', SAVE_PATH+'/'+new_filename+'.wav')
 
     sound = AudioSegment.from_file("downloaded/"+new_filename+".wav", format="wav")
