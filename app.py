@@ -190,23 +190,21 @@ def post_url():
     sound = AudioSegment.from_file("downloaded/"+new_filename+".wav", format="wav")
 
     if record['min_duration'] and record['max_duration']: 
+        # secound duration
         min_duration = record['min_duration']
         max_duration = record['max_duration']
 
-        startMin, startSec = min_duration.split(':', 1)
-        endMin, endSec = max_duration.split(':', 1)
-
         # Time to miliseconds
-        startTime = int(startMin)*60*1000+int(startSec)*1000
-        endTime = int(endMin)*60*1000+int(endSec)*1000
+        startTime = int(min_duration)*1000
+        endTime = int(max_duration)*1000
 
-        if int(startMin)*60+int(startSec) > sound.duration_seconds:
+        if int(min_duration)*1000 > len(sound):
             return jsonify({
                 'status': 400,
                 'message': 'Minimum duration cannot be greater than the length of the audio duration!'
             }), 400
 
-        if int(endMin)*60+int(endSec) > sound.duration_seconds:
+        if int(max_duration)*1000 > len(sound):
             return jsonify({
                 'status': 400,
                 'message': 'Maximum duration cannot be greater than the length of the audio duration!'
@@ -320,5 +318,5 @@ def after_verify(response):
         shutil.rmtree(endpoint)
 
     return response
-
-app.run()
+if __name__ == '__main__':
+    app.run()
