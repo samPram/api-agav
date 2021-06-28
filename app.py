@@ -17,6 +17,7 @@ import shutil
 import glob
 
 app = flask.Flask(__name__)
+cross_origin(app)
 app.config["DEBUG"]=True
 
 @app.route("/")
@@ -159,12 +160,11 @@ def vad_collector(sample_rate, frame_duration_ms,
  """
 
 @app.route("/urls/", methods=['POST'])
-@cross_origin()
 def post_url():
     record = request.json
 
     rate = record['sample_rate']
-    aggressiv = record['aggressiv']
+    aggressiv = record['aggressive']
 
     SAVE_PATH = os.path.dirname(app.instance_path)+'/downloaded'
 
@@ -257,7 +257,8 @@ def post_url():
     for audio_output in sorted(dir_output):
         data.append({
             'title': audio_output,
-            'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
+            # 'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
+            'path': 'http://4.3.2.6:5000'+'/'+new_filename+'/'+audio_output,
             'isVerified': False
         })
 
@@ -295,7 +296,6 @@ def post_vefify():
     memory_file.seek(0)
     return send_file(memory_file, attachment_filename=fileName, as_attachment=True)
 
-
 @app.after_request
 def after_verify(response):
     method = request.method
@@ -319,7 +319,6 @@ def after_verify(response):
         endpoint = record['data'][0]['path'][0:last_endpoint+1]
         shutil.rmtree(endpoint)
 
-    
     return response
 
 app.run()
