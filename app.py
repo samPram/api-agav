@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+from random import sample
 import flask
 from flask import request, jsonify, send_file
 import youtube_dl
@@ -9,7 +10,7 @@ import contextlib
 import sys
 import wave
 import webrtcvad
-from flask_cors import cross_origin
+from flask_cors import CORS, cross_origin
 import time
 from io import BytesIO
 import zipfile
@@ -17,8 +18,13 @@ import shutil
 import glob
 
 app = flask.Flask(__name__)
+<<<<<<< HEAD
 cross_origin(app)
+=======
+CORS(app)
+>>>>>>> add: default value param
 app.config["DEBUG"]=True
+app.config["CORS_HEADERS"] = 'Content-Type'
 
 @app.route("/")
 def hello_world():
@@ -159,12 +165,17 @@ def vad_collector(sample_rate, frame_duration_ms,
 3 merupakan params tingkat aggresive
  """
 
-@app.route("/urls/", methods=['POST'])
-def post_url():
+@app.route("/urls/", methods=['POST', 'OPTIONS'])
+@cross_origin()
+def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10):
     record = request.json
 
-    rate = record['sample_rate']
-    aggressiv = record['aggressive']
+    if "sample_rate" in record:
+        rate = record['sample_rate']
+    if "aggressive" in record:
+        aggressive = record['aggressive']
+    if "frame" in record:
+        frame = record['frame']
 
     SAVE_PATH = os.path.dirname(app.instance_path)+'/downloaded'
 
@@ -189,61 +200,56 @@ def post_url():
 
     sound = AudioSegment.from_file("downloaded/"+new_filename+".wav", format="wav")
 
-    if record['min_duration'] and record['max_duration']: 
-        # secound duration
+    if "min_duratioin" in record:
         min_duration = record['min_duration']
+    if "max_duration" in record:
         max_duration = record['max_duration']
 
-        # Time to miliseconds
-        startTime = int(min_duration)*1000
-        endTime = int(max_duration)*1000
+    # Time to miliseconds
+    startTime = int(min_duration)*1000
+    endTime = int(max_duration)*1000
 
-        if int(min_duration)*1000 > len(sound):
-            return jsonify({
-                'status': 400,
-                'message': 'Minimum duration cannot be greater than the length of the audio duration!'
-            }), 400
+    if startTime > len(sound):
+        return jsonify({
+            'status': 400,
+            'message': 'Minimum duration cannot be greater than the length of the audio duration!'
+        }), 400
 
-        if int(max_duration)*1000 > len(sound):
-            return jsonify({
-                'status': 400,
-                'message': 'Maximum duration cannot be greater than the length of the audio duration!'
-            }), 400
+    if endTime > len(sound):
+        return jsonify({
+            'status': 400,
+            'message': 'Maximum duration cannot be greater than the length of the audio duration!'
+        }), 400
 
-        if startTime > endTime: 
-            return jsonify({
-                'status': 400,
-                'message': 'Minimum duration cannot be greater than the maximum duration'
-            }), 400
+    if startTime > endTime: 
+        return jsonify({
+            'status': 400,
+            'message': 'Minimum duration cannot be greater than the maximum duration'
+        }), 400
 
-        if endTime < startTime: 
-            return jsonify({
-                'status': 400,
-                'message': 'Maximum duration cannot be less than the minimum duration'
-            }), 400
+    if endTime < startTime: 
+        return jsonify({
+            'status': 400,
+            'message': 'Maximum duration cannot be less than the minimum duration'
+        }), 400
 
-        extract = sound[startTime:endTime]
+    extract = sound[startTime:endTime]
 
-        file_handle = extract.export("downloaded/convert-"+new_filename+".wav",
-                            format="wav",
-                            bitrate="192k",
-                            parameters=["-ac", "1", "-ar", str(rate)])
-    else:
-        file_handle = sound.export("downloaded/convert-"+new_filename+".wav",
-                            format="wav",
-                            bitrate="192k",
-                            parameters=["-ac", "1", "-ar", str(rate)])
+    file_handle = extract.export("downloaded/convert-"+new_filename+".wav",
+                        format="wav",
+                        bitrate="192k",
+                        parameters=["-ac", "1", "-ar", str(rate)])
 
     audio, sample_rate = read_wave('downloaded/convert-'+new_filename+'.wav')
     """ end read audio wave """
 
     """ mendefinisikan aggresive model VAD """
-    vad = webrtcvad.Vad(int(aggressiv))
+    vad = webrtcvad.Vad(int(aggressive))
     """ generate frame tiap 30 ms, jadi 1 detik ada 33 frames """
-    frames = frame_generator(record['frame'], audio, sample_rate)
+    frames = frame_generator(frame, audio, sample_rate)
     frames = list(frames)
     """ end modal VAD """
-    segments = vad_collector(sample_rate, record['frame'], 300, vad, frames)
+    segments = vad_collector(sample_rate, frame, 300, vad, frames)
     os.mkdir(new_filename)
     for i, segment in enumerate(segments):
         path = new_filename+'/chunk-%002d.wav' % (i,)
@@ -255,8 +261,12 @@ def post_url():
     for audio_output in sorted(dir_output):
         data.append({
             'title': audio_output,
+<<<<<<< HEAD
             # 'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
             'path': 'http://4.3.2.6:5000'+'/'+new_filename+'/'+audio_output,
+=======
+            'path': request.host_url+new_filename+'/'+audio_output,
+>>>>>>> add: default value param
             'isVerified': False
         })
 
@@ -318,5 +328,12 @@ def after_verify(response):
         shutil.rmtree(endpoint)
 
     return response
+
+@app.route('/coba/', methods=['GET', 'OPTIONS'])
+@cross_origin()
+def coba():
+    path = request.host_url+'lxb2qs79m4a/chunk-00.wav'
+    return jsonify({'data':path}), 200
+
 if __name__ == '__main__':
     app.run()
