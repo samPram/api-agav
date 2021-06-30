@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 from random import sample
 import flask
 from flask import request, jsonify, send_file
+from flask.helpers import send_from_directory
 import youtube_dl
 import os
 from pydub import AudioSegment
@@ -17,12 +18,8 @@ import zipfile
 import shutil
 import glob
 
-app = flask.Flask(__name__)
-<<<<<<< HEAD
-cross_origin(app)
-=======
+app = flask.Flask(__name__, static_url_path='')
 CORS(app)
->>>>>>> add: default value param
 app.config["DEBUG"]=True
 app.config["CORS_HEADERS"] = 'Content-Type'
 
@@ -261,12 +258,8 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
     for audio_output in sorted(dir_output):
         data.append({
             'title': audio_output,
-<<<<<<< HEAD
-            # 'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
-            'path': 'http://4.3.2.6:5000'+'/'+new_filename+'/'+audio_output,
-=======
-            'path': request.host_url+new_filename+'/'+audio_output,
->>>>>>> add: default value param
+            'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
+            # 'path': request.host_url+new_filename+'/'+audio_output,
             'isVerified': False
         })
 
@@ -277,6 +270,17 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
     }
     
     return jsonify(response), 200
+
+# @app.after_request
+# def after_urls(response):
+#     record = request.json
+#     path = record['url']
+#     directory = path[-11:].lower()
+#     # print(directory)
+#     send_from_directory(directory, )
+
+#     return response
+
 
 @app.route('/verify/', methods=['POST'])
 def post_vefify():
@@ -326,14 +330,14 @@ def after_verify(response):
         last_endpoint = record['data'][0]['path'].rfind('/')
         endpoint = record['data'][0]['path'][0:last_endpoint+1]
         shutil.rmtree(endpoint)
-
+    
     return response
 
-@app.route('/coba/', methods=['GET', 'OPTIONS'])
-@cross_origin()
-def coba():
-    path = request.host_url+'lxb2qs79m4a/chunk-00.wav'
-    return jsonify({'data':path}), 200
+# @app.route('/coba/', methods=['GET', 'OPTIONS'])
+# @cross_origin()
+# def coba():
+#     path = os.path.dirname(app.instance_path)+'/'+'lxb2qs79m4a/chunk-00.wav'
+#     return jsonify({'data':path}), 200
 
 if __name__ == '__main__':
     app.run()
