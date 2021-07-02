@@ -1,0 +1,12 @@
+click==8.0.1
+Flask==2.0.1
+Flask-Cors==3.0.10
+gunicorn==20.1.0
+itsdangerous==2.0.1
+Jinja2==3.0.1
+MarkupSafe==2.0.1
+pydub==0.25.1
+six==1.16.0
+webrtcvad==2.0.10
+Werkzeug==2.0.1
+youtube-dl==2021.6.6

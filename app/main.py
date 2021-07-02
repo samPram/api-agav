@@ -1,5 +1,4 @@
 from __future__ import unicode_literals
-from random import sample
 import flask
 from flask import request, jsonify, send_file
 from flask.helpers import send_from_directory
@@ -282,7 +281,8 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
 #     return response
 
 
-@app.route('/verify/', methods=['POST'])
+@app.route('/verify/', methods=['POST', 'OPTIONS'])
+@cross_origin()
 def post_vefify():
     record = request.json
 
@@ -319,11 +319,11 @@ def after_verify(response):
         PATH = os.path.dirname(app.instance_path)+'/downloaded'
         item = record['data'][0]['path'].split('/')
         id_file = item[len(item)-2]
-        print(id_file)
+        # print(id_file)
         
         os.chdir(PATH)
         for file in glob.glob('*'+id_file+'.wav'):
-            print(file)
+            # print(file)
             os.remove(PATH+'/'+file)
 
         # REMOVE FOLDER CHUNK
@@ -338,6 +338,3 @@ def after_verify(response):
 # def coba():
 #     path = os.path.dirname(app.instance_path)+'/'+'lxb2qs79m4a/chunk-00.wav'
 #     return jsonify({'data':path}), 200
-
-if __name__ == '__main__':
-    app.run()
