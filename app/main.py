@@ -319,7 +319,7 @@ def after_verify(response):
         PATH = os.path.dirname(app.instance_path)+'/downloaded'
         item = record['data'][0]['path'].split('/')
         id_file = item[len(item)-2]
-        # print(id_file)
+        print(id_file)
         
         os.chdir(PATH)
         for file in glob.glob('*'+id_file+'.wav'):
