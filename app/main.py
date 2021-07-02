@@ -257,8 +257,8 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
     for audio_output in sorted(dir_output):
         data.append({
             'title': audio_output,
-            'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
-            # 'path': request.host_url+new_filename+'/'+audio_output,
+            # 'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
+            'path': request.host_url+new_filename+'/'+audio_output,
             'isVerified': False
         })
 
