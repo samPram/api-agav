@@ -279,26 +279,26 @@ def get_audio(filename):
 @cross_origin()
 def post_vefify():
     record = request.json
+    AUDIO_PATH = os.path.dirname(app.instance_path)+'/audio/'
 
-    last_endpoint = record['data'][0]['path'].rfind('/')
-    endpoint = record['data'][0]['path'][0:last_endpoint+1]
+    parts = record['data'][0]['path'].split('/')
 
     for i in range(len(record['data'])):
     # print(record['data'][i])
         if record['data'][i]['isVerified'] == False:
             # print('ok')
-            os.remove(record['data'][i]['path'])
+            os.remove(AUDIO_PATH+record['data'][i]['path'][record['data'][i]['path'].rfind('audio/')+6:])
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     fileName = "data_audio_{}.zip".format(timestr)
     memory_file = BytesIO()
     
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(endpoint):
+        for root, dirs, files in os.walk(AUDIO_PATH+parts[len(parts)-2]):
             # print(root)
             for file in files:
                 # print(file)
-                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(endpoint, '..')))
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(AUDIO_PATH+parts[len(parts)-2], '..')))
 
     memory_file.seek(0)
     return send_file(memory_file, attachment_filename=fileName, as_attachment=True)
@@ -311,19 +311,17 @@ def after_verify(response):
 
         record = request.json
         # REMOVE FILE IN DOWNLOADED
-        PATH = os.path.dirname(app.instance_path)+'/downloaded'
+        PATH_APP = os.path.dirname(app.instance_path)
         item = record['data'][0]['path'].split('/')
         id_file = item[len(item)-2]
-        print(id_file)
+        # print(id_file)
         
-        os.chdir(PATH)
+        os.chdir(PATH_APP+'/downloaded')
         for file in glob.glob('*'+id_file+'.wav'):
-            # print(file)
-            os.remove(PATH+'/'+file)
+            # print(PATH_APP+'/downloaded/'+file)
+            os.remove(PATH_APP+'/downloaded/'+file)
 
         # REMOVE FOLDER CHUNK
-        last_endpoint = record['data'][0]['path'].rfind('/')
-        endpoint = record['data'][0]['path'][0:last_endpoint+1]
-        shutil.rmtree(endpoint)
+        shutil.rmtree(PATH_APP+'/audio/'+id_file)
     
     return response
