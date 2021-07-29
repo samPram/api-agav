@@ -257,7 +257,7 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
         data.append({
             'title': audio_output,
             # 'path': os.path.dirname(app.instance_path)+'/audio/'+new_filename+'/'+audio_output,
-            'path': request.base_url+'audio/'+new_filename+'/'+audio_output,
+            'path': request.host_url+'audio/'+new_filename+'/'+audio_output,
             'isVerified': False
         })
 
@@ -272,7 +272,7 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
 @app.route('/audio/<path:filename>')
 def get_audio(filename):
     print(os.path.dirname(app.instance_path))
-    return send_from_directory(os.path.join(request.base_url, 'audio/'), filename)
+    return send_from_directory(os.path.join(request.host_url, 'audio/'), filename)
 
 
 @app.route('/verify/', methods=['POST', 'OPTIONS'])
