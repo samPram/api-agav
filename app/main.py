@@ -24,6 +24,7 @@ app.config["CORS_HEADERS"] = 'Content-Type'
 
 @app.route("/")
 def hello_world():
+    print(request.base_url);
     return "<p>Hello, World!</p>"
 
 def read_wave(path):
@@ -172,6 +173,14 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
         aggressive = record['aggressive']
     if "frame" in record:
         frame = record['frame']
+    if "min_duratioin" in record:
+        min_duration = record['min_duration']
+    if "max_duration" in record:
+        max_duration = record['max_duration']
+
+    # Time to miliseconds
+    startTime = int(min_duration)*1000
+    endTime = int(max_duration)*1000
 
     SAVE_PATH = os.path.dirname(app.instance_path)+'/downloaded'
 
@@ -193,17 +202,7 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
     # print(type(filename))
     new_filename = str(filename).lower()
     os.rename(SAVE_PATH+'/'+filename+'.wav', SAVE_PATH+'/'+new_filename+'.wav')
-
-    sound = AudioSegment.from_file("downloaded/"+new_filename+".wav", format="wav")
-
-    if "min_duratioin" in record:
-        min_duration = record['min_duration']
-    if "max_duration" in record:
-        max_duration = record['max_duration']
-
-    # Time to miliseconds
-    startTime = int(min_duration)*1000
-    endTime = int(max_duration)*1000
+    sound = AudioSegment.from_file(SAVE_PATH+'/'+new_filename+".wav", format="wav")
 
     if startTime > len(sound):
         return jsonify({
@@ -246,19 +245,19 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
     frames = list(frames)
     """ end modal VAD """
     segments = vad_collector(sample_rate, frame, 300, vad, frames)
-    os.mkdir(new_filename)
+    os.makedirs(os.path.join('audio', new_filename), exist_ok=True)
     for i, segment in enumerate(segments):
-        path = new_filename+'/chunk-%002d.wav' % (i,)
+        path = 'audio/'+new_filename+'/chunk-%002d.wav' % (i,)
         print(' Writing %s' % (path,))
         write_wave(path, segment, sample_rate)
 
     data = []
-    dir_output = os.listdir(new_filename+'/')
+    dir_output = os.listdir('audio/'+new_filename+'/')
     for audio_output in sorted(dir_output):
         data.append({
             'title': audio_output,
-            # 'path': os.path.dirname(app.instance_path)+'/'+new_filename+'/'+audio_output,
-            'path': request.host_url+new_filename+'/'+audio_output,
+            'path': os.path.dirname(app.instance_path)+'/audio/'+new_filename+'/'+audio_output,
+            # 'path': request.host_url+'audio/'+new_filename+'/'+audio_output,
             'isVerified': False
         })
 
@@ -270,15 +269,10 @@ def post_url(rate=8000, aggressive=3, min_duration=0, max_duration=30, frame=10)
     
     return jsonify(response), 200
 
-# @app.after_request
-# def after_urls(response):
-#     record = request.json
-#     path = record['url']
-#     directory = path[-11:].lower()
-#     # print(directory)
-#     send_from_directory(directory, )
-
-#     return response
+@app.route('/audio/<path:filename>')
+def get_audio(filename):
+    print(os.path.dirname(app.instance_path))
+    return send_from_directory(os.path.dirname(app.instance_path)+'/audio/', filename)
 
 
 @app.route('/verify/', methods=['POST', 'OPTIONS'])
@@ -292,9 +286,8 @@ def post_vefify():
     for i in range(len(record['data'])):
     # print(record['data'][i])
         if record['data'][i]['isVerified'] == False:
+            # print('ok')
             os.remove(record['data'][i]['path'])
-    
-    
 
     timestr = time.strftime("%Y%m%d-%H%M%S")
     fileName = "data_audio_{}.zip".format(timestr)
@@ -302,7 +295,9 @@ def post_vefify():
     
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(endpoint):
+            # print(root)
             for file in files:
+                # print(file)
                 zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(endpoint, '..')))
 
     memory_file.seek(0)
@@ -332,9 +327,3 @@ def after_verify(response):
         shutil.rmtree(endpoint)
     
     return response
-
-# @app.route('/coba/', methods=['GET', 'OPTIONS'])
-# @cross_origin()
-# def coba():
-#     path = os.path.dirname(app.instance_path)+'/'+'lxb2qs79m4a/chunk-00.wav'
-#     return jsonify({'data':path}), 200
